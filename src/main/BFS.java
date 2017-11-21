@@ -3,7 +3,8 @@ package main;
 import java.util.*;
 
 public class BFS {
-    static public Map<State.Site, LinkedList<State.Site>> shortestPathsBFS(State.Site startSite, Set<State.Site> finishSites) {
+    static public Map<State.Site, LinkedList<State.Site>> shortestPathsBFS
+            (State.Site startSite, Set<State.Site> finishSites, boolean neutralRivers, boolean ourRivers) {
         Queue<State.Site> queue = new LinkedList<>();
         Set<State.Site> visited = new HashSet<>();
         Map<State.Site, State.Site> parentSites = new HashMap<>();
@@ -12,7 +13,7 @@ public class BFS {
         visited.add(startSite);
         while (!queue.isEmpty()) {
             State.Site next = queue.poll();
-            for (State.Site neighbor : next.getNeighbors()) {
+            for (State.Site neighbor : next.getNeighbors(neutralRivers, ourRivers)) {
                 if (visited.contains(neighbor)) continue;
                 visited.add(neighbor);
                 parentSites.put(neighbor, next);
@@ -26,9 +27,19 @@ public class BFS {
                     site = parentSites.get(site);
                 }
                 Collections.reverse(shortestPath);
-                shortestPaths.put(next, shortestPath);
+                if (!pathExists(shortestPath)) shortestPaths.put(next, shortestPath);
             }
         }
         return shortestPaths;
+    }
+
+    static private boolean pathExists(LinkedList<State.Site> path) {
+        Queue<State.Site> path1 = new LinkedList<>(path);
+        while (path1.size() > 1) {
+            State.Site site1 = path1.poll();
+            State.Site site2 = path1.peek();
+            if (site1.getNeighbors(true, false).contains(site2)) return false;
+        }
+        return true;
     }
 }

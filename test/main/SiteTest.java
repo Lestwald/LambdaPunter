@@ -71,19 +71,19 @@ class SiteTest {
         Set<State.Site> expected1 = new HashSet<>();
         expected1.add(site2);
         expected1.add(site3);
-        assertEquals(expected1, site1.getNeighbors());
+        assertEquals(expected1, site1.getNeighbors(true, false));
 
         Set<State.Site> expected2 = new HashSet<>();
         expected2.add(site1);
         expected2.add(site7);
-        assertEquals(expected2, site2.getNeighbors());
+        assertEquals(expected2, site2.getNeighbors(true,false));
 
         Set<State.Site> expected4 = new HashSet<>();
         expected4.add(site3);
         expected4.add(site5);
         expected4.add(site6);
         expected4.add(site7);
-        assertEquals(expected4, site4.getNeighbors());
+        assertEquals(expected4, site4.getNeighbors(true,false));
     }
 
 }

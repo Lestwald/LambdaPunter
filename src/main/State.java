@@ -8,23 +8,22 @@ public class State {
     static class Site {
         private int id;
         private boolean isMine;
-        private boolean isOur;
         Set<River> rivers = new HashSet<>();
 
         Site(int id) {
             this.id = id;
             isMine = false;
-            isOur = false;
         }
 
         void addRiver(River river) {
             rivers.add(river);
         }
 
-        Set<Site> getNeighbors() {
+        Set<Site> getNeighbors(boolean neutralRivers, boolean ourRivers) {
             Set<Site> neighbors = new HashSet<>();
             for (River river : rivers) {
-                if (river.getRiverState() == River.RiverState.Neutral) {
+                if (neutralRivers && river.getRiverState() == River.RiverState.Neutral ||
+                        (ourRivers && river.getRiverState() == River.RiverState.Our)) {
                     for (Site site : river.sites) {
                         if (site.id != this.id) {
                             neighbors.add(site);
@@ -35,7 +34,7 @@ public class State {
             return neighbors;
         }
 
-        public int getId() {
+        int getId() {
             return id;
         }
 
@@ -43,39 +42,37 @@ public class State {
             isMine = true;
         }
 
-        private void setOur() {
-            isOur = true;
-        }
-
         boolean isMine() {
             return isMine;
         }
 
         boolean isOur() {
-            return isOur;
+            for (River river : rivers) {
+                if (river.getRiverState() == River.RiverState.Our) return true;
+            }
+            return false;
         }
 
-        public Set<River> getRivers() {
-            return rivers;
+        boolean isFree() {
+            for (River river : rivers) {
+                if (river.getRiverState() == River.RiverState.Neutral) return true;
+            }
+            return false;
         }
 
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-
             Site site = (Site) o;
-
             if (id != site.id) return false;
-            if (isMine != site.isMine) return false;
-            return isOur == site.isOur;
+            return isMine == site.isMine;
         }
 
         @Override
         public int hashCode() {
             int result = id;
             result = 31 * result + (isMine ? 1 : 0);
-            result = 31 * result + (isOur ? 1 : 0);
             return result;
         }
 
@@ -120,14 +117,18 @@ public class State {
             return riverState;
         }
 
-        public protocol.data.River getRiver() {
+        protocol.data.River getRiver() {
             return river;
+        }
+
+        Set<Site> getSites() {
+            return sites;
         }
 
         @Override
         public String toString() {
             return "River{" +
-                    "river=" + river +  "; " +
+                    "river=" + river + "; " +
                     "riverState=" + riverState +
                     '}';
         }
@@ -149,13 +150,10 @@ public class State {
             result = 31 * result + (riverState != null ? riverState.hashCode() : 0);
             return result;
         }
-
-        public Set<Site> getSites() {
-            return sites;
-        }
     }
 
     private Set<Site> sites = new HashSet<>();
+    private Set<Site> mines = new HashSet<>();
     private Set<River> rivers = new HashSet<>();
     private int myId = -1;
 
@@ -178,8 +176,14 @@ public class State {
                 site2 = new Site(river.getTarget());
                 sites.add(site2);
             }
-            if (setup.getMap().getMines().contains(site1.id)) site1.setMine();
-            if (setup.getMap().getMines().contains(site2.id)) site2.setMine();
+            if (setup.getMap().getMines().contains(site1.id)) {
+                site1.setMine();
+                mines.add(site1);
+            }
+            if (setup.getMap().getMines().contains(site2.id)) {
+                site2.setMine();
+                mines.add(site2);
+            }
             site1.addRiver(river1);
             site2.addRiver(river1);
             river1.addSite(site1);
@@ -195,14 +199,15 @@ public class State {
                     river.setOur();
                 }
             }
-            for (Site site : sites) {
-                if (site.id == claim.getSource() || site.id == claim.getSource()) site.setOur();
-            }
         } else for (River river : rivers) {
             if (river.river.equals(new protocol.data.River(claim.getSource(), claim.getTarget()))) {
                 river.setEnemy();
             }
         }
+    }
+
+    Set<Site> getMines() {
+        return mines;
     }
 
     Set<Site> getSites() {
@@ -211,9 +216,5 @@ public class State {
 
     Set<River> getRivers() {
         return rivers;
-    }
-
-    int getMyId() {
-        return myId;
     }
 }
