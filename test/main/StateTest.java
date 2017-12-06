@@ -43,16 +43,9 @@ class StateTest {
         sites1.add(site2);
 
         Set<State.River> rivers1 = new HashSet<>();
-        State.River river01 = new State.River(new River(0, 1));
-        State.River river02 = new State.River(new River(0, 2));
-        State.River river12 = new State.River(new River(1, 2));
-
-        river01.addSite(site0);
-        river01.addSite(site1);
-        river02.addSite(site0);
-        river02.addSite(site2);
-        river12.addSite(site1);
-        river12.addSite(site2);
+        State.River river01 = new State.River(site0, site1);
+        State.River river02 = new State.River(site0, site2);
+        State.River river12 = new State.River(site1, site2);
 
         rivers1.add(river01);
         rivers1.add(river02);

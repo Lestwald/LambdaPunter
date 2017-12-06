@@ -32,7 +32,7 @@ public class Main {
             else if (message instanceof GameResult) break;
             if (k == 0) {
                 k++;
-                solver.makeRoute(false);
+                solver.makeRouteMtoM();
             }
             solver.makeMove();
         }

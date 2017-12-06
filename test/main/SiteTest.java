@@ -1,7 +1,6 @@
 package main;
 
 import org.junit.jupiter.api.Test;
-import protocol.data.River;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -20,34 +19,16 @@ class SiteTest {
         State.Site site7 = new State.Site(7);
         State.Site site8 = new State.Site(8);
 
-        State.River river12 = new State.River(new River(1, 2));
-        State.River river13 = new State.River(new River(1, 3));
-        State.River river27 = new State.River(new River(2, 7));
-        State.River river34 = new State.River(new River(3, 4));
-        State.River river45 = new State.River(new River(4, 5));
-        State.River river46 = new State.River(new River(4, 6));
-        State.River river47 = new State.River(new River(4, 7));
-        State.River river58 = new State.River(new River(5, 8));
-        State.River river78 = new State.River(new River(7, 8));
+        State.River river12 = new State.River(site1, site2);
+        State.River river13 = new State.River(site1, site3);
+        State.River river27 = new State.River(site2, site7);
+        State.River river34 = new State.River(site3, site4);
+        State.River river45 = new State.River(site4, site5);
+        State.River river46 = new State.River(site4, site6);
+        State.River river47 = new State.River(site4, site7);
+        State.River river58 = new State.River(site5, site8);
+        State.River river78 = new State.River(site7, site8);
 
-        river12.addSite(site1);
-        river12.addSite(site2);
-        river13.addSite(site1);
-        river13.addSite(site3);
-        river27.addSite(site2);
-        river27.addSite(site7);
-        river34.addSite(site3);
-        river34.addSite(site4);
-        river45.addSite(site4);
-        river45.addSite(site5);
-        river46.addSite(site4);
-        river46.addSite(site6);
-        river47.addSite(site4);
-        river47.addSite(site7);
-        river58.addSite(site5);
-        river58.addSite(site8);
-        river78.addSite(site7);
-        river78.addSite(site8);
 
         site1.addRiver(river12);
         site1.addRiver(river13);

@@ -19,7 +19,7 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="args4j-2.33" level="project" />
     <orderEntry type="library" name="org.apiguardian:apiguardian-api:1.0.0" level="project" />
+    <orderEntry type="library" name="args4j-2.33" level="project" />
   </component>
 </module>

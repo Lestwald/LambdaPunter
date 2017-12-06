@@ -2,8 +2,8 @@ package main;
 
 import java.util.*;
 
-public class BFS {
-    static public Map<State.Site, LinkedList<State.Site>> shortestPathsBFS
+class BFS {
+    static  Map<State.Site, LinkedList<State.Site>> shortestPathsBFS
             (State.Site startSite, Set<State.Site> finishSites, boolean neutralRivers, boolean ourRivers) {
         Queue<State.Site> queue = new LinkedList<>();
         Set<State.Site> visited = new HashSet<>();
