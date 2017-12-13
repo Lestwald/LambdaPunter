@@ -34,15 +34,17 @@ public class Solver {
     private State state;
     private Protocol protocol;
     private Deque<State.Site> route = new LinkedList<>();
-    private State.Site from = null;
-    private State.Site to = null;
     private Set<PairSites> connectedMines = new HashSet<>();
-    private int parity = 0;
-    private int flag = 1; // 0 - в одну сторону, 1 - в две
+    private State.Site from;
+    private State.Site to;
+    private int parityOfMove = 0;
+    private boolean twoWaysMovement = true;
+
 
     public Solver(State state, Protocol protocol) {
         this.state = state;
         this.protocol = protocol;
+        makeRouteMtoM();
     }
 
     private int lengthOfRoute(LinkedList<State.Site> route1) {
@@ -51,7 +53,7 @@ public class Solver {
         while (route.size() > 1) {
             State.Site site1 = route.poll();
             State.Site site2 = route.peek();
-            if (site1 != null && site1.getNeighbors(true, false).contains(site2)) length++;
+            if (site1 != null && site1.getNeighbors(true, false,false).contains(site2)) length++;
         }
         return length;
     }
@@ -64,7 +66,7 @@ public class Solver {
         while (!queue.isEmpty()) {
             State.Site next = queue.poll();
             if (next.equals(site2)) return true;
-            for (State.Site neighbor : next.getNeighbors(false, true)) {
+            for (State.Site neighbor : next.getNeighbors(false, true, false)) {
                 if (visited.contains(neighbor)) continue;
                 visited.add(neighbor);
                 queue.add(neighbor);
@@ -73,80 +75,83 @@ public class Solver {
         return false;
     }
 
-    public void makeRouteMtoM() {
+    private void makeRouteMtoM() {
         int minLength = Integer.MAX_VALUE;
         Set<State.Site> mines = new HashSet<>(state.getMines());
         for (State.Site mine : state.getMines()) {
             mines.remove(mine);
-            Map<State.Site, LinkedList<State.Site>> shortestPaths =
-                    BFS.shortestPathsBFS(mine, mines, true, true);
-            for (Map.Entry<State.Site, LinkedList<State.Site>> shortestPath : shortestPaths.entrySet()) {
-                int length = lengthOfRoute(shortestPath.getValue());
-                State.Site mine0 = shortestPath.getKey();
-                if (!mine.equals(mine0) && !connectedMines.contains(new PairSites(mine, mine0)) &&
-                        isSitesConnected(mine, mine0)) {
-                    connectedMines.add(new PairSites(mine, mine0));
-                }
-                else if (!isSitesConnected(mine, mine0) && length < minLength && length > 1) {
-                    minLength = length;
-                    route = shortestPath.getValue();
+            if (mine.isFree()) {
+                Map<State.Site, LinkedList<State.Site>> shortestPaths =
+                        BFS.shortestPathsBFS(mine, mines);
+                for (Map.Entry<State.Site, LinkedList<State.Site>> shortestPath : shortestPaths.entrySet()) {
+                    int length = lengthOfRoute(shortestPath.getValue());
+                    State.Site mine0 = shortestPath.getKey();
+                    if (!mine.equals(mine0) && !connectedMines.contains(new PairSites(mine, mine0)) &&
+                            isSitesConnected(mine, mine0)) {
+                        connectedMines.add(new PairSites(mine, mine0));
+                    } else if (!isSitesConnected(mine, mine0) && length < minLength && length > 1) {
+                        minLength = length;
+                        route = shortestPath.getValue();
+                    }
                 }
             }
         }
     }
 
-    private void makeRoute1(State.Site site) {
-        Map<State.Site, LinkedList<State.Site>> shortestPaths =
-                BFS.shortestPathsBFS(site, state.getSites(), true, true);
+    private void makeLongestRoute() {
         int maxLength = 1;
-        int minNeutralLength = Integer.MAX_VALUE;
-        for (Map.Entry<State.Site, LinkedList<State.Site>> shortestPath : shortestPaths.entrySet()) {
-            int length = shortestPath.getValue().size();
-            //int neutralLength = lengthOfRoute(shortestPath.getValue());
-            if (length > maxLength) {
-                maxLength = length;
-                //minNeutralLength = neutralLength;
-                route = shortestPath.getValue();
+        for (State.Site mine : state.getMines()) {
+            if (mine.isFree()) {
+                Map<State.Site, LinkedList<State.Site>> shortestPaths =
+                        BFS.shortestPathsBFS(mine, state.getSites());
+                for (Map.Entry<State.Site, LinkedList<State.Site>> shortestPath : shortestPaths.entrySet()) {
+                    int length = shortestPath.getValue().size();
+                    if (length > maxLength) {
+                        maxLength = length;
+                        route = shortestPath.getValue();
+                    }
+                }
             }
         }
+    }
+
+    private boolean isRouteFree() {
+        Deque<State.Site> path = new LinkedList<>(route);
+        while (path.size() > 1) {
+            State.Site site1 = path.poll();
+            State.Site site2 = path.peek();
+            if (site1.getNeighbors(false, false, true).contains(site2)) return false;
+        }
+        return true;
+    }
+
+    private boolean currentMove() {
+        if (route.size() < 2) return false;
+        if (twoWaysMovement) {
+            if (parityOfMove % 2 == 1) {
+                from = route.poll();
+                to = route.peek();
+            } else {
+                from = route.pollLast();
+                to = route.peekLast();
+            }
+        } else {
+            from = route.poll();
+            to = route.peek();
+        }
+        return true;
     }
 
     private boolean tryToMakeMove() {
-        parity++;
-        if (parity % 2 == 1) {
-            from = null;
-            if (!route.isEmpty()) from = route.poll();
-            to = null;
-            if (!route.isEmpty()) to = route.peek();
-        } else {
-            from = null;
-            if (!route.isEmpty()) from = route.pollLast();
-            to = null;
-            if (!route.isEmpty()) to = route.peekLast();
-        }
-
-        if (from != null && to != null) {
+        if (!isRouteFree()) return false;
+        while (currentMove()) {
             for (State.River river : state.getRivers()) {
                 if (river.equals(new State.River(new State.Site(from.getId()), new State.Site(to.getId())))) {
-                    if (river.getRiverState() == State.River.RiverState.Neutral) {
+                    if (river.isNeutral()) {
                         protocol.claimMove(from.getId(), to.getId());
+                        parityOfMove++;
                         return true;
-                    } else if (river.getRiverState() == State.River.RiverState.Our) {
-                        while (route.size() > 1) {
-                            from = route.poll();
-                            to = route.peek();
-                            if (from.getNeighbors(true, false).contains(to)) {
-                                for (State.River river1 : state.getRivers()) {
-                                    if (river1.equals(new State.River(new State.Site(from.getId()), new State.Site(to.getId())))) {
-                                        if (river1.getRiverState() == State.River.RiverState.Neutral) {
-                                            protocol.claimMove(from.getId(), to.getId());
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    } else if (river.isEnemy()) return false;
                     break;
                 }
             }
@@ -154,100 +159,26 @@ public class Solver {
         return false;
     }
 
-    private boolean tryToMakeMove1() {
-        from = null;
-        if (!route.isEmpty()) from = route.poll();
-        to = null;
-        if (!route.isEmpty()) to = route.peek();
-
-        if (from != null && to != null) {
-            for (State.River river : state.getRivers()) {
-                if (river.equals(new State.River(new State.Site(from.getId()), new State.Site(to.getId())))) {
-                    if (river.getRiverState() == State.River.RiverState.Neutral) {
-                        protocol.claimMove(from.getId(), to.getId());
-                        return true;
-                    } else if (river.getRiverState() == State.River.RiverState.Our) {
-                        while (route.size() > 1) {
-                            from = route.poll();
-                            to = route.peek();
-                            if (from.getNeighbors(true, false).contains(to)) {
-                                for (State.River river1 : state.getRivers()) {
-                                    if (river1.equals(new State.River(new State.Site(from.getId()), new State.Site(to.getId())))) {
-                                        if (river1.getRiverState() == State.River.RiverState.Neutral) {
-                                            protocol.claimMove(from.getId(), to.getId());
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-        return false;
-    }
-
-    public boolean makeMove() {
-        if (flag == 1) {
-            if (tryToMakeMove()) return true;
-        } else {
-            if (tryToMakeMove1()) return true;
-        }
+    public void makeMove() {
+        if (tryToMakeMove()) return;
 
         if (connectedMines.size() < (state.getMines().size() * (state.getMines().size() - 1)) / 2) {
             makeRouteMtoM();
-            flag = 1;
-            if (tryToMakeMove()) return true;
+            twoWaysMovement = true;
+            if (tryToMakeMove()) return;
         }
 
-        for (State.Site mine : state.getMines()) {
-            if (mine.isFree()) {
-                makeRoute1(mine);
-                flag = 0;
-                if (tryToMakeMove1()) return true;
-            }
-        }
-
-        int size = 0;
-        for (State.Site site : state.getSites()) {
-            if (site.isOur() && site.isFree()) size++;
-        }
-        if (size != 0) {
-            int item = new Random().nextInt(size);
-            int i = 0;
-
-            for (State.Site site : state.getSites()) {
-                if (site.isOur() && site.isFree()) {
-                    if (i == item) {
-                        makeRoute1(site);
-                        flag = 0;
-                        if (tryToMakeMove1()) return true;
-                        break;
-                    }
-                    i++;
-                }
-            }
-        }
+        makeLongestRoute();
+        twoWaysMovement = false;
+        if (tryToMakeMove()) return;
 
         for (State.River river : state.getRivers()) {
-            if (river.getRiverState() == State.River.RiverState.Neutral) {
-                if (river.getSource().isOur() || river.getTarget().isOur()) {
-                    protocol.claimMove(river.getSource().getId(), river.getTarget().getId());
-                    return true;
-                }
-            }
-        }
-
-        for (State.River river : state.getRivers()) {
-            if (river.getRiverState() == State.River.RiverState.Neutral) {
+            if (river.isNeutral()) {
                 protocol.claimMove(river.getSource().getId(), river.getTarget().getId());
-                return true;
+                return;
             }
         }
 
         protocol.passMove();
-        return true;
     }
 }

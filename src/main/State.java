@@ -8,7 +8,7 @@ public class State {
     static class Site {
         private int id;
         private boolean isMine;
-        Set<River> rivers = new HashSet<>();
+        private Set<River> rivers = new HashSet<>();
 
         Site(int id) {
             this.id = id;
@@ -19,11 +19,12 @@ public class State {
             rivers.add(river);
         }
 
-        Set<Site> getNeighbors(boolean neutralRivers, boolean ourRivers) {
+        Set<Site> getNeighbors(boolean neutralRivers, boolean ourRivers, boolean enemyRivers) {
             Set<Site> neighbors = new HashSet<>();
             for (River river : rivers) {
-                if (neutralRivers && river.getRiverState() == River.RiverState.Neutral ||
-                        (ourRivers && river.getRiverState() == River.RiverState.Our)) {
+                if (neutralRivers && river.isNeutral() ||
+                        ourRivers && river.isOur() ||
+                        enemyRivers && river.isEnemy()) {
                     if (river.getSource() != this) neighbors.add(river.getSource());
                     else if (river.getTarget() != this) neighbors.add(river.getTarget());
                 }
@@ -43,16 +44,9 @@ public class State {
             return isMine;
         }
 
-        boolean isOur() {
-            for (River river : rivers) {
-                if (river.getRiverState() == River.RiverState.Our) return true;
-            }
-            return false;
-        }
-
         boolean isFree() {
             for (River river : rivers) {
-                if (river.getRiverState() == River.RiverState.Neutral) return true;
+                if (river.isNeutral() || river.isOur()) return true;
             }
             return false;
         }
@@ -102,16 +96,12 @@ public class State {
             riverState = RiverState.Enemy;
         }
 
-        public void setSource(Site source) {
+        void setSource(Site source) {
             this.source = source;
         }
 
-        public void setTarget(Site target) {
+        void setTarget(Site target) {
             this.target = target;
-        }
-
-        RiverState getRiverState() {
-            return riverState;
         }
 
         Site getSource() {
@@ -120,6 +110,18 @@ public class State {
 
         Site getTarget() {
             return target;
+        }
+
+        boolean isNeutral() {
+            return riverState == RiverState.Neutral;
+        }
+
+        boolean isOur() {
+            return riverState == RiverState.Our;
+        }
+
+        boolean isEnemy() {
+            return riverState == RiverState.Enemy;
         }
 
         @Override
@@ -157,12 +159,10 @@ public class State {
 
     public void init(Setup setup) {
         myId = setup.getPunter();
-
         for (protocol.data.River river1 : setup.getMap().getRivers()) {
             Site source = new Site(river1.getSource());
             Site target = new Site(river1.getTarget());
             River river = new River(source, target);
-
             for (Site site : sites) {
                 if (site.id == river.getSource().id) {
                     source = site;
@@ -173,10 +173,8 @@ public class State {
                     river.setTarget(target);
                 }
             }
-
             if (!sites.contains(source)) sites.add(source);
             if (!sites.contains(target)) sites.add(target);
-
             if (setup.getMap().getMines().contains(source.id)) {
                 source.setMine();
                 mines.add(source);

@@ -21,19 +21,13 @@ public class Main {
         state.init(setup);
         protocol.ready();
 
-        int k = 0;
         while (true) {
             ServerMessage message = protocol.serverMessage();
             if (message instanceof GameTurnMessage) {
                 for (protocol.data.Move move : ((GameTurnMessage) message).getMove().getMoves()) {
                     if (move instanceof ClaimMove) state.update(((ClaimMove) move).getClaim());
                 }
-            }
-            else if (message instanceof GameResult) break;
-            if (k == 0) {
-                k++;
-                solver.makeRouteMtoM();
-            }
+            } else if (message instanceof GameResult) break;
             solver.makeMove();
         }
     }
